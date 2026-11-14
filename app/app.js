@@ -57,21 +57,55 @@ function buildRow(incident) {
   const button = el('button', 'ack', 'Ack');
   button.type = 'button';
   button.dataset.testid = 'ack';
-  button.addEventListener('click', () => onAck(incident.id, row, button));
+  button.addEventListener('click', () => askToConfirm(incident));
   row.append(button);
   if (acked.has(incident.id)) markAcked(row);
   return row;
 }
 
-async function onAck(id, row, button) {
-  button.disabled = true;
+/** R7: Ack asks to confirm, and the confirm names the incident id read at click time (rows may move). */
+let confirmBox = null;
+
+function closeConfirm() {
+  if (confirmBox) confirmBox.remove();
+  confirmBox = null;
+}
+
+function askToConfirm(incident) {
+  closeConfirm();
+  const box = el('div', 'confirm');
+  box.dataset.testid = 'confirm';
+  box.dataset.id = incident.id;
+  box.setAttribute('role', 'alertdialog');
+  box.setAttribute('aria-label', `Ack ${incident.id}?`);
+  const text = el('p', 'confirm-text');
+  text.append('Ack ', el('strong', '', incident.id), ` (${incident.severity} · ${incident.service} · ${incident.region})? This marks you as taking it.`);
+  const yes = el('button', 'confirm-ack', `Ack ${incident.id}`);
+  yes.type = 'button';
+  yes.dataset.testid = 'confirm-ack';
+  const no = el('button', 'confirm-cancel', 'Cancel');
+  no.type = 'button';
+  no.dataset.testid = 'confirm-cancel';
+  yes.addEventListener('click', () => doAck(incident.id, yes));
+  no.addEventListener('click', closeConfirm);
+  box.append(text, yes, no);
+  document.body.append(box);
+  confirmBox = box;
+  no.focus(); // Enter or Space cannot confirm by accident
+}
+
+async function doAck(id, yes) {
+  yes.disabled = true;
   try {
     await ack(id);
     acked.add(id);
-    markAcked(row);
+    const row = rows.get(id);
+    if (row) markAcked(row);
+    closeConfirm();
     showError('');
   } catch (err) {
-    button.disabled = false;
+    yes.disabled = false;
+    closeConfirm();
     showError(`Could not ack ${id}: ${err.message}`);
   }
 }
