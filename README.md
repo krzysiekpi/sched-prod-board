@@ -69,3 +69,7 @@ recording shows:
 
 `{ session, step: 2, productReceipt, url, report, videoLink }` — plus `replay` (what the replay printed)
 when you ran it on your machine instead of GitHub.
+
+## Build
+
+`scripts/build.sh` copies `app/` to `dist/` and stamps the git sha (R6). Deploy `dist/`.
